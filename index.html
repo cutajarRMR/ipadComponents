@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPad Component Explorer - Educational Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .instructions {
+            background: rgba(255,255,255,0.2);
+            padding: 15px 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .ipad-workspace {
+            flex: 2;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            min-height: 600px;
+        }
+
+        .ipad-container {
+            position: relative;
+            width: 400px;
+            height: 550px;
+            margin: 0 auto;
+            perspective: 1000px;
+        }
+
+        .component {
+            position: absolute;
+            cursor: grab;
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+        }
+
+        .component:hover {
+            filter: brightness(1.1);
+            transform: scale(1.02);
+        }
+
+        .component.dragging {
+            cursor: grabbing;
+            z-index: 1000;
+            opacity: 0.8;
+        }
+
+        .component.removed {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .info-panel {
+            flex: 1;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-height: 700px;
+            overflow-y: auto;
+        }
+
+        .info-panel h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .component-info {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        .component-info.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .component-info h3 {
+            color: #764ba2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .component-info p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .component-info ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .component-info li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .progress-bar {
+            background: #f0f0f0;
+            border-radius: 10px;
+            height: 30px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .quiz-container {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 700px;
+            margin: 20px auto;
+        }
+
+        .quiz-container.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        .question {
+            margin-bottom: 25px;
+        }
+
+        .question h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .option:hover {
+            background: #e8e8e8;
+            transform: translateX(5px);
+        }
+
+        .option.selected {
+            border-color: #667eea;
+            background: #e8e8ff;
+        }
+
+        .option.correct {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+
+        .option.incorrect {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+
+        .quiz-result {
+            display: none;
+            background: linear-gradient(135deg, #4caf50, #45a049);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+
+        .quiz-result.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        .welcome-message h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .component-label {
+            position: absolute;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .component:hover .component-label {
+            opacity: 1;
+        }
+
+        .celebration {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            z-index: 2000;
+            text-align: center;
+        }
+
+        .celebration.active {
+            display: block;
+            animation: celebrationPop 0.5s;
+        }
+
+        @keyframes celebrationPop {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .celebration h2 {
+            color: #4caf50;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1999;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔧 iPad Component Explorer 🔧</h1>
+        <div class="instructions">
+            Click and drag components to dismantle the iPad and learn about each part!
+        </div>
+    </header>
+
+    <div class="game-container">
+        <div class="ipad-workspace">
+            <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">Dismantle Your iPad</h2>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+
+            <div class="ipad-container" id="ipadContainer">
+                <!-- Components will be layered from top to bottom -->
+                
+                <!-- Layer 9: Front Glass -->
+                <div class="component" id="glass" data-component="glass" style="z-index: 9;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <defs>
+                            <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#f0f0f0;stop-opacity:0.8" />
+                                <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.9" />
+                            </linearGradient>
+                            <filter id="glassShine">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                                <feOffset dx="2" dy="2" result="offsetblur"/>
+                                <feComponentTransfer>
+                                    <feFuncA type="linear" slope="0.3"/>
+                                </feComponentTransfer>
+                                <feMerge>
+                                    <feMergeNode/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <rect x="10" y="10" width="380" height="530" rx="30" fill="url(#glassGradient)" 
+                              stroke="#c0c0c0" stroke-width="2" filter="url(#glassShine)"/>
+                        <rect x="30" y="80" width="340" height="440" rx="5" fill="#000" opacity="0.7"/>
+                        <circle cx="200" cy="45" r="8" fill="#333" opacity="0.5"/>
+                        <circle cx="180" cy="45" r="4" fill="#1a1a1a" opacity="0.6"/>
+                    </svg>
+                    <div class="component-label" style="top: -30px; left: 50%; transform: translateX(-50%);">Front Glass</div>
+                </div>
+
+                <!-- Layer 8: LCD Screen -->
+                <div class="component" id="lcd" data-component="lcd" style="z-index: 8;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <rect x="25" y="75" width="350" height="450" rx="5" fill="#1a1a1a"/>
+                        <rect x="35" y="85" width="330" height="430" rx="3" fill="#0a0a0a"/>
+                        <g opacity="0.3">
+                            <line x1="35" y1="100" x2="365" y2="100" stroke="#333" stroke-width="1"/>
+                            <line x1="35" y1="120" x2="365" y2="120" stroke="#333" stroke-width="1"/>
+                            <line x1="35" y1="140" x2="365" y2="140" stroke="#333" stroke-width="1"/>
+                        </g>
+                        <text x="200" y="275" text-anchor="middle" fill="#333" font-size="14">LCD Display</text>
+                    </svg>
+                    <div class="component-label" style="top: 50%; left: -80px;">LCD Screen</div>
+                </div>
+
+                <!-- Layer 7: Digitizer/Touch Layer -->
+                <div class="component" id="digitizer" data-component="digitizer" style="z-index: 7;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <rect x="30" y="80" width="340" height="440" rx="5" fill="none" 
+                              stroke="#4a90e2" stroke-width="3" stroke-dasharray="10,5" opacity="0.6"/>
+                        <g opacity="0.4">
+                            <circle cx="100" cy="150" r="3" fill="#4a90e2"/>
+                            <circle cx="200" cy="200" r="3" fill="#4a90e2"/>
+                            <circle cx="300" cy="250" r="3" fill="#4a90e2"/>
+                            <circle cx="150" cy="350" r="3" fill="#4a90e2"/>
+                            <circle cx="250" cy="400" r="3" fill="#4a90e2"/>
+                        </g>
+                        <text x="200" y="275" text-anchor="middle" fill="#4a90e2" font-size="12" opacity="0.8">Touch Digitizer</text>
+                    </svg>
+                    <div class="component-label" style="top: 50%; right: -100px;">Touch Digitizer</div>
+                </div>
+
+                <!-- Layer 6: Front Camera -->
+                <div class="component" id="frontCamera" data-component="frontCamera" style="z-index: 6;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <g transform="translate(170, 35)">
+                            <circle cx="10" cy="10" r="12" fill="#2c3e50"/>
+                            <circle cx="10" cy="10" r="8" fill="#34495e"/>
+                            <circle cx="10" cy="10" r="5" fill="#1a1a1a"/>
+                            <circle cx="8" cy="8" r="2" fill="#4a90e2" opacity="0.5"/>
+                            <text x="10" y="35" text-anchor="middle" fill="#555" font-size="10">Front Camera</text>
+                        </g>
+                    </svg>
+                    <div class="component-label" style="top: 25px; left: 50%; transform: translateX(-50%);">Front Camera</div>
+                </div>
+
+                <!-- Layer 5: Logic Board/Motherboard -->
+                <div class="component" id="motherboard" data-component="motherboard" style="z-index: 5;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <g transform="translate(100, 150)">
+                            <!-- Main board -->
+                            <rect x="0" y="0" width="200" height="250" rx="5" fill="#2d5016" stroke="#1a3010" stroke-width="2"/>
+                            
+                            <!-- CPU (A-series chip) -->
+                            <rect x="70" y="40" width="60" height="60" rx="3" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+                            <text x="100" y="75" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold">A15</text>
+                            <text x="100" y="85" text-anchor="middle" fill="#ccc" font-size="8">CPU</text>
+                            
+                            <!-- GPU -->
+                            <rect x="20" y="40" width="40" height="40" rx="2" fill="#333" stroke="#555" stroke-width="1"/>
+                            <text x="40" y="65" text-anchor="middle" fill="#fff" font-size="8">GPU</text>
+                            
+                            <!-- RAM chips -->
+                            <rect x="140" y="40" width="30" height="30" rx="2" fill="#1a4d80" stroke="#2563a8" stroke-width="1"/>
+                            <text x="155" y="60" text-anchor="middle" fill="#fff" font-size="7">RAM</text>
+                            
+                            <!-- Storage -->
+                            <rect x="140" y="80" width="30" height="30" rx="2" fill="#4a148c" stroke="#6a1ba9" stroke-width="1"/>
+                            <text x="155" y="100" text-anchor="middle" fill="#fff" font-size="7">SSD</text>
+                            
+                            <!-- Various chips and components -->
+                            <circle cx="30" cy="130" r="8" fill="#c0392b"/>
+                            <circle cx="60" cy="130" r="8" fill="#d35400"/>
+                            <circle cx="90" cy="130" r="8" fill="#f39c12"/>
+                            
+                            <!-- Connection traces -->
+                            <path d="M 50 60 Q 80 70 100 60" stroke="#ffeb3b" stroke-width="1" fill="none" opacity="0.6"/>
+                            <path d="M 100 100 L 155 70" stroke="#ffeb3b" stroke-width="1" fill="none" opacity="0.6"/>
+                            
+                            <!-- Connectors -->
+                            <rect x="10" y="200" width="180" height="30" rx="3" fill="#c0c0c0" stroke="#888" stroke-width="1"/>
+                            <g>
+                                <rect x="20" y="205" width="8" height="20" fill="#333"/>
+                                <rect x="35" y="205" width="8" height="20" fill="#333"/>
+                                <rect x="50" y="205" width="8" height="20" fill="#333"/>
+                                <rect x="65" y="205" width="8" height="20" fill="#333"/>
+                            </g>
+                            
+                            <text x="100" y="-10" text-anchor="middle" fill="#2d5016" font-size="12" font-weight="bold">Logic Board</text>
+                        </g>
+                    </svg>
+                    <div class="component-label" style="top: 180px; left: -110px;">Logic Board (CPU/GPU)</div>
+                </div>
+
+                <!-- Layer 4: Battery -->
+                <div class="component" id="battery" data-component="battery" style="z-index: 4;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <g transform="translate(80, 180)">
+                            <defs>
+                                <linearGradient id="batteryGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#c0c0c0;stop-opacity:1" />
+                                    <stop offset="50%" style="stop-color:#e0e0e0;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#c0c0c0;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <rect x="0" y="0" width="240" height="180" rx="8" fill="url(#batteryGradient)" stroke="#888" stroke-width="2"/>
+                            
+                            <!-- Battery cells -->
+                            <rect x="10" y="10" width="70" height="160" rx="5" fill="#999" stroke="#666" stroke-width="1"/>
+                            <rect x="85" y="10" width="70" height="160" rx="5" fill="#999" stroke="#666" stroke-width="1"/>
+                            <rect x="160" y="10" width="70" height="160" rx="5" fill="#999" stroke="#666" stroke-width="1"/>
+                            
+                            <!-- Warning symbol -->
+                            <g transform="translate(120, 75)">
+                                <polygon points="0,-15 13,15 -13,15" fill="#ff9800" stroke="#f57c00" stroke-width="2"/>
+                                <text x="0" y="8" text-anchor="middle" fill="#fff" font-size="18" font-weight="bold">!</text>
+                            </g>
+                            
+                            <!-- Battery info -->
+                            <text x="120" y="155" text-anchor="middle" fill="#333" font-size="10">Li-ion Battery</text>
+                            <text x="120" y="168" text-anchor="middle" fill="#333" font-size="9">32.4 Wh</text>
+                            
+                            <text x="120" y="-10" text-anchor="middle" fill="#666" font-size="12" font-weight="bold">Battery Pack</text>
+                        </g>
+                    </svg>
+                    <div class="component-label" style="top: 280px; right: -80px;">Battery</div>
+                </div>
+
+                <!-- Layer 3: Rear Camera -->
+                <div class="component" id="rearCamera" data-component="rearCamera" style="z-index: 3;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <g transform="translate(300, 100)">
+                            <rect x="-25" y="-25" width="50" height="70" rx="10" fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
+                            <circle cx="0" cy="0" r="18" fill="#34495e"/>
+                            <circle cx="0" cy="0" r="14" fill="#1a1a1a"/>
+                            <circle cx="0" cy="0" r="10" fill="#34495e"/>
+                            <circle cx="-5" cy="-5" r="3" fill="#4a90e2" opacity="0.5"/>
+                            <circle cx="0" cy="30" r="6" fill="#e74c3c"/>
+                            <text x="0" y="60" text-anchor="middle" fill="#555" font-size="9">Rear Camera</text>
+                        </g>
+                    </svg>
+                    <div class="component-label" style="top: 115px; right: -100px;">Rear Camera</div>
+                </div>
+
+                <!-- Layer 2: Speakers -->
+                <div class="component" id="speakers" data-component="speakers" style="z-index: 2;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <!-- Top speaker -->
+                        <g transform="translate(200, 60)">
+                            <rect x="-40" y="-8" width="80" height="16" rx="8" fill="#2c3e50"/>
+                            <g>
+                                <circle cx="-25" cy="0" r="2" fill="#555"/>
+                                <circle cx="-15" cy="0" r="2" fill="#555"/>
+                                <circle cx="-5" cy="0" r="2" fill="#555"/>
+                                <circle cx="5" cy="0" r="2" fill="#555"/>
+                                <circle cx="15" cy="0" r="2" fill="#555"/>
+                                <circle cx="25" cy="0" r="2" fill="#555"/>
+                            </g>
+                        </g>
+                        
+                        <!-- Bottom speakers -->
+                        <g transform="translate(200, 520)">
+                            <rect x="-80" y="-8" width="50" height="16" rx="8" fill="#2c3e50"/>
+                            <rect x="30" y="-8" width="50" height="16" rx="8" fill="#2c3e50"/>
+                            <g>
+                                <circle cx="-65" cy="0" r="2" fill="#555"/>
+                                <circle cx="-55" cy="0" r="2" fill="#555"/>
+                                <circle cx="-45" cy="0" r="2" fill="#555"/>
+                                <circle cx="45" cy="0" r="2" fill="#555"/>
+                                <circle cx="55" cy="0" r="2" fill="#555"/>
+                                <circle cx="65" cy="0" r="2" fill="#555"/>
+                            </g>
+                        </g>
+                        <text x="200" y="95" text-anchor="middle" fill="#555" font-size="9">Speakers</text>
+                    </svg>
+                    <div class="component-label" style="bottom: 20px; left: 50%; transform: translateX(-50%);">Speakers</div>
+                </div>
+
+                <!-- Layer 1: Charging Port -->
+                <div class="component" id="port" data-component="port" style="z-index: 1;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <g transform="translate(200, 535)">
+                            <rect x="-20" y="-10" width="40" height="20" rx="3" fill="#2c3e50" stroke="#1a252f" stroke-width="1"/>
+                            <rect x="-15" y="-6" width="30" height="12" rx="2" fill="#1a1a1a"/>
+                            <g fill="#c0c0c0">
+                                <rect x="-12" y="-4" width="2" height="8"/>
+                                <rect x="-7" y="-4" width="2" height="8"/>
+                                <rect x="-2" y="-4" width="2" height="8"/>
+                                <rect x="3" y="-4" width="2" height="8"/>
+                                <rect x="8" y="-4" width="2" height="8"/>
+                            </g>
+                            <text x="0" y="-18" text-anchor="middle" fill="#555" font-size="9">USB-C Port</text>
+                        </g>
+                    </svg>
+                    <div class="component-label" style="bottom: 10px; left: 50%; transform: translateX(-50%);">Charging Port</div>
+                </div>
+
+                <!-- Layer 0: Frame/Chassis -->
+                <div class="component" id="frame" data-component="frame" style="z-index: 0;">
+                    <svg width="400" height="550" viewBox="0 0 400 550">
+                        <defs>
+                            <linearGradient id="frameGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#95a5a6;stop-opacity:1" />
+                                <stop offset="50%" style="stop-color:#bdc3c7;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#95a5a6;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="5" y="5" width="390" height="540" rx="35" fill="url(#frameGradient)" 
+                              stroke="#7f8c8d" stroke-width="3"/>
+                        <rect x="15" y="15" width="370" height="520" rx="30" fill="none" 
+                              stroke="#95a5a6" stroke-width="2"/>
+                        
+                        <!-- Volume buttons -->
+                        <rect x="0" y="150" width="5" height="40" rx="2" fill="#7f8c8d"/>
+                        <rect x="0" y="200" width="5" height="40" rx="2" fill="#7f8c8d"/>
+                        
+                        <!-- Power button -->
+                        <rect x="395" y="150" width="5" height="50" rx="2" fill="#7f8c8d"/>
+                        
+                        <text x="200" y="275" text-anchor="middle" fill="#7f8c8d" font-size="14" font-weight="bold">iPad Frame</text>
+                    </svg>
+                    <div class="component-label" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">Aluminum Frame</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="resetBtn">Reset iPad</button>
+                <button id="quizBtn" disabled>Take Quiz</button>
+                <button id="hintBtn">Show Hint</button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h2>Component Information</h2>
+            
+            <div id="welcomeMsg" class="welcome-message active">
+                <h3>👋 Welcome!</h3>
+                <p>Click and drag components off the iPad to dismantle it and learn about each part.</p>
+                <p>Start with the <strong>Front Glass</strong> at the top!</p>
+            </div>
+
+            <div id="info-glass" class="component-info">
+                <h3>🔲 Front Glass & Touch Screen</h3>
+                <p>The front glass is the protective layer you touch when using your iPad. It's made of specially strengthened glass that's designed to resist scratches and cracks.</p>
+                
+                <h3>Key Features:</h3>
+                <ul>
+                    <li><strong>Touch Sensitive:</strong> Contains sensors that detect where you touch</li>
+                    <li><strong>Oleophobic Coating:</strong> Special coating that resists fingerprints and smudges</li>
+                    <li><strong>Strengthened Glass:</strong> Much stronger than regular glass to prevent breaking</li>
+                    <li><strong>Laminated Design:</strong> Bonded to the screen below for better clarity</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 The glass can detect up to 10 touch points at once, allowing for multi-finger gestures like pinch-to-zoom!</p>
+            </div>
+
+            <div id="info-lcd" class="component-info">
+                <h3>📺 LCD Display Screen</h3>
+                <p>The LCD (Liquid Crystal Display) is what actually shows all the images, colors, and text. It contains millions of tiny pixels that can change color incredibly fast!</p>
+                
+                <h3>How It Works:</h3>
+                <ul>
+                    <li><strong>Pixels:</strong> Millions of tiny dots that create the image (typical iPad has over 3 million pixels!)</li>
+                    <li><strong>Backlight:</strong> LED lights behind the screen make it bright</li>
+                    <li><strong>Liquid Crystals:</strong> Special molecules that twist to let light through</li>
+                    <li><strong>Color Filters:</strong> Red, green, and blue filters create all colors you see</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 The pixels refresh 60 times per second (some iPads even 120 times!), making everything look smooth and responsive!</p>
+            </div>
+
+            <div id="info-digitizer" class="component-info">
+                <h3>✋ Touch Digitizer</h3>
+                <p>The digitizer is a transparent layer that detects exactly where and how you touch the screen. It's like an invisible grid of sensors!</p>
+                
+                <h3>Technology:</h3>
+                <ul>
+                    <li><strong>Capacitive Touch:</strong> Senses the electrical properties of your finger</li>
+                    <li><strong>Multi-Touch:</strong> Can track multiple fingers at the same time</li>
+                    <li><strong>Pressure Sensitivity:</strong> Some iPads can even detect how hard you press!</li>
+                    <li><strong>Palm Rejection:</strong> Ignores your palm when using Apple Pencil</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 The digitizer scans for touches over 100 times per second to make sure it catches every swipe and tap!</p>
+            </div>
+
+            <div id="info-frontCamera" class="component-info">
+                <h3>📷 Front Camera (FaceTime Camera)</h3>
+                <p>The front camera lets you take selfies and make video calls. Modern iPads have advanced cameras with special features!</p>
+                
+                <h3>Capabilities:</h3>
+                <ul>
+                    <li><strong>High Resolution:</strong> Takes crystal-clear photos and videos</li>
+                    <li><strong>Center Stage:</strong> Automatically keeps you in frame during video calls</li>
+                    <li><strong>Face ID:</strong> On some models, it recognizes your face to unlock the iPad</li>
+                    <li><strong>Portrait Mode:</strong> Blurs the background for professional-looking photos</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 The Center Stage feature uses AI to follow you around the room during video calls by digitally panning and zooming!</p>
+            </div>
+
+            <div id="info-motherboard" class="component-info">
+                <h3>🔌 Logic Board (Motherboard)</h3>
+                <p>The logic board is the "brain headquarters" of your iPad. It connects all the components together and contains the most important chips!</p>
+                
+                <h3>Key Components:</h3>
+                <ul>
+                    <li><strong>CPU (Central Processing Unit):</strong> The main brain that does calculations and runs apps (Apple A-series chip)</li>
+                    <li><strong>GPU (Graphics Processing Unit):</strong> Specialized chip for drawing graphics and games</li>
+                    <li><strong>RAM (Memory):</strong> Temporary fast memory for running multiple apps at once</li>
+                    <li><strong>Storage (SSD):</strong> Permanent memory where all your apps, photos, and files are saved</li>
+                    <li><strong>Other Chips:</strong> Controllers for WiFi, Bluetooth, cameras, and more!</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 The CPU contains over 15 BILLION tiny transistors - that's more than twice the number of people on Earth!</p>
+            </div>
+
+            <div id="info-battery" class="component-info">
+                <h3>🔋 Lithium-Ion Battery</h3>
+                <p>The battery powers everything in your iPad. It's a rechargeable lithium-ion battery designed to last all day!</p>
+                
+                <h3>Battery Facts:</h3>
+                <ul>
+                    <li><strong>Capacity:</strong> Typically 30-40 Watt-hours, enough for 10 hours of use</li>
+                    <li><strong>Rechargeable:</strong> Can be charged hundreds of times</li>
+                    <li><strong>Lithium-Ion:</strong> Uses special chemistry to store lots of energy in a small space</li>
+                    <li><strong>Multiple Cells:</strong> Actually several battery cells connected together</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 The battery uses the same type of technology as electric cars, just much smaller! A single charge powers billions of calculations.</p>
+            </div>
+
+            <div id="info-rearCamera" class="component-info">
+                <h3>📸 Rear Camera (Back Camera)</h3>
+                <p>The rear camera is more powerful than the front camera and is used for taking high-quality photos and scanning documents!</p>
+                
+                <h3>Features:</h3>
+                <ul>
+                    <li><strong>Higher Resolution:</strong> Takes even better photos than the front camera</li>
+                    <li><strong>Better Lens:</strong> Captures more light for clearer pictures</li>
+                    <li><strong>4K Video:</strong> Can record super high-quality videos</li>
+                    <li><strong>Document Scanning:</strong> Perfect for scanning homework or notes</li>
+                    <li><strong>AR (Augmented Reality):</strong> Works with apps to blend digital objects with real world</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 Some iPad cameras have a LiDAR scanner that shoots out invisible laser light to create 3D maps of rooms!</p>
+            </div>
+
+            <div id="info-speakers" class="component-info">
+                <h3>🔊 Stereo Speakers</h3>
+                <p>iPads have multiple speakers positioned around the device to create stereo sound - different sounds from different directions!</p>
+                
+                <h3>Speaker System:</h3>
+                <ul>
+                    <li><strong>Multiple Speakers:</strong> Usually 2-4 speakers for surround sound</li>
+                    <li><strong>Stereo Sound:</strong> Left and right channels for realistic audio</li>
+                    <li><strong>Loud Volume:</strong> Powerful enough to fill a room</li>
+                    <li><strong>Wide Frequency:</strong> Can play deep bass and high treble notes</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 The speakers automatically adjust which ones to use based on how you're holding the iPad - portrait or landscape!</p>
+            </div>
+
+            <div id="info-port" class="component-info">
+                <h3>🔌 USB-C / Lightning Port</h3>
+                <p>The charging port does more than just charge your iPad - it's a powerful connection for data transfer and accessories!</p>
+                
+                <h3>Port Functions:</h3>
+                <ul>
+                    <li><strong>Charging:</strong> Connects to power adapter to recharge the battery</li>
+                    <li><strong>Data Transfer:</strong> Move files between iPad and computer</li>
+                    <li><strong>Accessories:</strong> Connect keyboards, mice, external drives, and more</li>
+                    <li><strong>Video Output:</strong> Can connect to external displays</li>
+                    <li><strong>Fast Charging:</strong> Newer models can charge very quickly</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 USB-C ports can transfer data at speeds up to 40 gigabits per second - that's like downloading hundreds of songs in one second!</p>
+            </div>
+
+            <div id="info-frame" class="component-info">
+                <h3>🔧 Aluminum Frame (Chassis)</h3>
+                <p>The frame is the structural skeleton that holds everything together. It's made from a single piece of aluminum for strength and lightness!</p>
+                
+                <h3>Frame Features:</h3>
+                <ul>
+                    <li><strong>Unibody Design:</strong> Carved from one solid piece of aluminum</li>
+                    <li><strong>Lightweight:</strong> Aluminum is strong but very light</li>
+                    <li><strong>Heat Dissipation:</strong> Helps cool the internal components</li>
+                    <li><strong>Antenna Housing:</strong> Contains antennas for WiFi and cellular</li>
+                    <li><strong>Buttons:</strong> Houses the power and volume buttons</li>
+                </ul>
+                
+                <h3>Fun Fact:</h3>
+                <p>💡 The aluminum frame is anodized, which means it's treated with electricity to make it harder and give it color. It's the same process used on spacecraft!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="celebration" id="celebration">
+        <h2>🎉 Congratulations! 🎉</h2>
+        <p style="font-size: 1.2em; margin-bottom: 20px;">You've successfully dismantled the entire iPad!</p>
+        <p style="color: #666; margin-bottom: 20px;">You've learned about all the major components. Ready to test your knowledge?</p>
+        <button onclick="closeCelebration()">Continue</button>
+    </div>
+
+    <div class="quiz-container" id="quizContainer">
+        <h2 style="color: #667eea; margin-bottom: 20px;">🧠 iPad Component Quiz</h2>
+        <p style="margin-bottom: 30px;">Test your knowledge! Select the best answer for each question.</p>
+
+        <div class="question">
+            <h3>Question 1: What does CPU stand for?</h3>
+            <div class="options">
+                <div class="option" data-question="1" data-answer="wrong">Computer Power Unit</div>
+                <div class="option" data-question="1" data-answer="correct">Central Processing Unit</div>
+                <div class="option" data-question="1" data-answer="wrong">Central Program Utility</div>
+                <div class="option" data-question="1" data-answer="wrong">Computer Processing Utility</div>
+            </div>
+        </div>
+
+        <div class="question">
+            <h3>Question 2: What type of battery does an iPad use?</h3>
+            <div class="options">
+                <div class="option" data-question="2" data-answer="wrong">AA batteries</div>
+                <div class="option" data-question="2" data-answer="correct">Lithium-Ion battery</div>
+                <div class="option" data-question="2" data-answer="wrong">Lead-Acid battery</div>
+                <div class="option" data-question="2" data-answer="wrong">Nuclear battery</div>
+            </div>
+        </div>
+
+        <div class="question">
+            <h3>Question 3: What is the GPU responsible for?</h3>
+            <div class="options">
+                <div class="option" data-question="3" data-answer="wrong">Storing your photos</div>
+                <div class="option" data-question="3" data-answer="correct">Drawing graphics and running games</div>
+                <div class="option" data-question="3" data-answer="wrong">Connecting to WiFi</div>
+                <div class="option" data-question="3" data-answer="wrong">Playing sound through speakers</div>
+            </div>
+        </div>
+
+        <div class="question">
+            <h3>Question 4: How many touch points can the iPad glass typically detect at once?</h3>
+            <div class="options">
+                <div class="option" data-question="4" data-answer="wrong">Only 1</div>
+                <div class="option" data-question="4" data-answer="wrong">Up to 5</div>
+                <div class="option" data-question="4" data-answer="correct">Up to 10</div>
+                <div class="option" data-question="4" data-answer="wrong">Unlimited</div>
+            </div>
+        </div>
+
+        <div class="question">
+            <h3>Question 5: What material is the iPad frame made from?</h3>
+            <div class="options">
+                <div class="option" data-question="5" data-answer="wrong">Plastic</div>
+                <div class="option" data-question="5" data-answer="wrong">Steel</div>
+                <div class="option" data-question="5" data-answer="correct">Aluminum</div>
+                <div class="option" data-question="5" data-answer="wrong">Glass</div>
+            </div>
+        </div>
+
+        <div class="question">
+            <h3>Question 6: What does the digitizer do?</h3>
+            <div class="options">
+                <div class="option" data-question="6" data-answer="wrong">Shows images on screen</div>
+                <div class="option" data-question="6" data-answer="correct">Detects where you touch the screen</div>
+                <div class="option" data-question="6" data-answer="wrong">Charges the battery</div>
+                <div class="option" data-question="6" data-answer="wrong">Stores apps and files</div>
+            </div>
+        </div>
+
+        <div class="question">
+            <h3>Question 7: Approximately how many transistors are in a modern iPad CPU?</h3>
+            <div class="options">
+                <div class="option" data-question="7" data-answer="wrong">1 million</div>
+                <div class="option" data-question="7" data-answer="wrong">100 million</div>
+                <div class="option" data-question="7" data-answer="wrong">1 billion</div>
+                <div class="option" data-question="7" data-answer="correct">15 billion</div>
+            </div>
+        </div>
+
+        <div class="question">
+            <h3>Question 8: What does the Center Stage feature use the front camera for?</h3>
+            <div class="options">
+                <div class="option" data-question="8" data-answer="wrong">Taking better selfies</div>
+                <div class="option" data-question="8" data-answer="correct">Keeping you in frame during video calls</div>
+                <div class="option" data-question="8" data-answer="wrong">Unlocking the iPad</div>
+                <div class="option" data-question="8" data-answer="wrong">Scanning documents</div>
+            </div>
+        </div>
+
+        <button id="submitQuiz" style="margin-top: 20px;">Submit Quiz</button>
+        
+        <div class="quiz-result" id="quizResult"></div>
+        
+        <div class="controls" style="margin-top: 20px;">
+            <button id="backToGame">Back to Game</button>
+            <button id="retakeQuiz" style="display: none;">Retake Quiz</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let removedComponents = new Set();
+        let totalComponents = 9;
+        let currentHintIndex = 0;
+        let quizAnswers = {};
+        
+        const componentOrder = ['glass', 'lcd', 'digitizer', 'frontCamera', 'motherboard', 'battery', 'rearCamera', 'speakers', 'port'];
+        
+        const hints = [
+            "Start by removing the Front Glass - it's the top layer!",
+            "Next, remove the LCD Screen underneath the glass.",
+            "The Touch Digitizer is the next layer to remove.",
+            "Look for the Front Camera near the top of the device.",
+            "The Logic Board (Motherboard) contains the CPU and GPU.",
+            "The Battery is a large component that powers everything.",
+            "Find the Rear Camera on the back side.",
+            "The Speakers are located at the top and bottom.",
+            "The Charging Port is at the very bottom."
+        ];
+
+        // Initialize drag and drop
+        function initDragAndDrop() {
+            const components = document.querySelectorAll('.component');
+            
+            components.forEach(component => {
+                let offsetX, offsetY, isDragging = false;
+                
+                component.addEventListener('mousedown', startDrag);
+                
+                function startDrag(e) {
+                    if (removedComponents.has(component.id)) return;
+                    
+                    isDragging = true;
+                    component.classList.add('dragging');
+                    
+                    const rect = component.getBoundingClientRect();
+                    offsetX = e.clientX - rect.left;
+                    offsetY = e.clientY - rect.top;
+                    
+                    document.addEventListener('mousemove', drag);
+                    document.addEventListener('mouseup', stopDrag);
+                    
+                    // Show component info
+                    showComponentInfo(component.dataset.component);
+                }
+                
+                function drag(e) {
+                    if (!isDragging) return;
+                    
+                    const container = document.getElementById('ipadContainer');
+                    const containerRect = container.getBoundingClientRect();
+                    
+                    let x = e.clientX - containerRect.left - offsetX;
+                    let y = e.clientY - containerRect.top - offsetY;
+                    
+                    component.style.left = x + 'px';
+                    component.style.top = y + 'px';
+                    
+                    // Check if dragged far enough to remove
+                    const distance = Math.sqrt(x * x + y * y);
+                    if (distance > 150) {
+                        removeComponent(component);
+                        stopDrag();
+                    }
+                }
+                
+                function stopDrag() {
+                    isDragging = false;
+                    component.classList.remove('dragging');
+                    document.removeEventListener('mousemove', drag);
+                    document.removeEventListener('mouseup', stopDrag);
+                }
+            });
+        }
+
+        function removeComponent(component) {
+            const componentId = component.id;
+            
+            if (removedComponents.has(componentId)) return;
+            
+            removedComponents.add(componentId);
+            component.classList.add('removed');
+            
+            showComponentInfo(component.dataset.component);
+            updateProgress();
+            
+            // Hide welcome message
+            document.getElementById('welcomeMsg').classList.remove('active');
+            
+            // Check if all components removed
+            if (removedComponents.size === totalComponents) {
+                setTimeout(showCelebration, 500);
+            }
+        }
+
+        function showComponentInfo(componentName) {
+            // Hide all info panels
+            document.querySelectorAll('.component-info').forEach(info => {
+                info.classList.remove('active');
+            });
+            document.getElementById('welcomeMsg').classList.remove('active');
+            
+            // Show selected component info
+            const infoPanel = document.getElementById('info-' + componentName);
+            if (infoPanel) {
+                infoPanel.classList.add('active');
+            }
+        }
+
+        function updateProgress() {
+            const percentage = (removedComponents.size / totalComponents) * 100;
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = percentage + '%';
+            progressFill.textContent = Math.round(percentage) + '%';
+            
+            // Enable quiz button when all components are removed
+            if (removedComponents.size === totalComponents) {
+                document.getElementById('quizBtn').disabled = false;
+            }
+        }
+
+        function resetGame() {
+            removedComponents.clear();
+            
+            const components = document.querySelectorAll('.component');
+            components.forEach(component => {
+                component.classList.remove('removed');
+                component.style.left = '';
+                component.style.top = '';
+            });
+            
+            updateProgress();
+            
+            document.getElementById('welcomeMsg').classList.add('active');
+            document.querySelectorAll('.component-info').forEach(info => {
+                info.classList.remove('active');
+            });
+            
+            document.getElementById('quizBtn').disabled = true;
+            currentHintIndex = 0;
+        }
+
+        function showHint() {
+            if (removedComponents.size === totalComponents) {
+                alert("🎉 You've already removed all components! Great job!");
+                return;
+            }
+            
+            // Find next component to remove
+            for (let i = 0; i < componentOrder.length; i++) {
+                if (!removedComponents.has(componentOrder[i])) {
+                    alert("💡 Hint: " + hints[i]);
+                    return;
+                }
+            }
+        }
+
+        function showCelebration() {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('celebration').classList.add('active');
+        }
+
+        function closeCelebration() {
+            document.getElementById('overlay').classList.remove('active');
+            document.getElementById('celebration').classList.remove('active');
+        }
+
+        function startQuiz() {
+            document.querySelector('.game-container').style.display = 'none';
+            document.getElementById('quizContainer').classList.add('active');
+            resetQuiz();
+        }
+
+        function resetQuiz() {
+            quizAnswers = {};
+            
+            // Clear all selections
+            document.querySelectorAll('.option').forEach(option => {
+                option.classList.remove('selected', 'correct', 'incorrect');
+                option.style.pointerEvents = 'auto';
+            });
+            
+            document.getElementById('quizResult').classList.remove('active');
+            document.getElementById('submitQuiz').style.display = 'block';
+            document.getElementById('retakeQuiz').style.display = 'none';
+        }
+
+        function backToGame() {
+            document.querySelector('.game-container').style.display = 'flex';
+            document.getElementById('quizContainer').classList.remove('active');
+        }
+
+        // Quiz option selection
+        document.querySelectorAll('.option').forEach(option => {
+            option.addEventListener('click', function() {
+                const question = this.dataset.question;
+                
+                // Deselect other options in the same question
+                document.querySelectorAll(`.option[data-question="${question}"]`).forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                
+                // Select this option
+                this.classList.add('selected');
+                quizAnswers[question] = this.dataset.answer;
+            });
+        });
+
+        function submitQuiz() {
+            // Check if all questions answered
+            if (Object.keys(quizAnswers).length < 8) {
+                alert('Please answer all questions before submitting!');
+                return;
+            }
+            
+            // Calculate score
+            let correct = 0;
+            Object.values(quizAnswers).forEach(answer => {
+                if (answer === 'correct') correct++;
+            });
+            
+            const percentage = (correct / 8) * 100;
+            
+            // Show correct/incorrect for each answer
+            document.querySelectorAll('.option').forEach(option => {
+                if (option.classList.contains('selected')) {
+                    if (option.dataset.answer === 'correct') {
+                        option.classList.add('correct');
+                    } else {
+                        option.classList.add('incorrect');
+                    }
+                }
+                // Highlight correct answers
+                if (option.dataset.answer === 'correct') {
+                    option.classList.add('correct');
+                }
+                option.style.pointerEvents = 'none';
+            });
+            
+            // Show result
+            const resultDiv = document.getElementById('quizResult');
+            let message = '';
+            
+            if (percentage === 100) {
+                message = '🏆 Perfect Score! You got all 8 questions correct!';
+                resultDiv.style.background = 'linear-gradient(135deg, #4caf50, #45a049)';
+            } else if (percentage >= 75) {
+                message = `🎉 Great Job! You got ${correct} out of 8 correct (${Math.round(percentage)}%)`;
+                resultDiv.style.background = 'linear-gradient(135deg, #4caf50, #45a049)';
+            } else if (percentage >= 50) {
+                message = `👍 Good Effort! You got ${correct} out of 8 correct (${Math.round(percentage)}%)`;
+                resultDiv.style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
+            } else {
+                message = `📚 Keep Learning! You got ${correct} out of 8 correct (${Math.round(percentage)}%)`;
+                resultDiv.style.background = 'linear-gradient(135deg, #f44336, #e53935)';
+            }
+            
+            resultDiv.textContent = message;
+            resultDiv.classList.add('active');
+            
+            document.getElementById('submitQuiz').style.display = 'none';
+            document.getElementById('retakeQuiz').style.display = 'inline-block';
+        }
+
+        // Event Listeners
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        document.getElementById('quizBtn').addEventListener('click', startQuiz);
+        document.getElementById('hintBtn').addEventListener('click', showHint);
+        document.getElementById('submitQuiz').addEventListener('click', submitQuiz);
+        document.getElementById('backToGame').addEventListener('click', backToGame);
+        document.getElementById('retakeQuiz').addEventListener('click', resetQuiz);
+
+        // Initialize game
+        initDragAndDrop();
+        updateProgress();
+    </script>
+</body>
+</html>
