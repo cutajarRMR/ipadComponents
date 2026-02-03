@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>iPad Component Explorer - Educational Game</title>
     <style>
         * {
@@ -20,6 +22,9 @@
             align-items: center;
             padding: 20px;
             color: #333;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            touch-action: pan-y; /* Allow vertical scrolling but prevent other gestures */
         }
 
         header {
@@ -65,6 +70,7 @@
             height: 550px;
             margin: 0 auto;
             perspective: 1000px;
+            touch-action: none; /* Prevent default touch behaviors in the game area */
         }
 
         .component {
@@ -74,9 +80,27 @@
             transform-style: preserve-3d;
         }
 
-        .component:hover {
+        .component:hover,
+        .component:active {
             filter: brightness(1.1);
             transform: scale(1.02);
+        }
+        
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .component {
+                /* Larger touch targets on touch devices */
+                cursor: pointer;
+            }
+            
+            button {
+                min-height: 44px; /* Apple's recommended minimum touch target */
+                min-width: 44px;
+            }
+            
+            .option {
+                min-height: 50px; /* Larger quiz options for touch */
+            }
         }
 
         .component.dragging {
@@ -934,7 +958,11 @@
             components.forEach(component => {
                 let offsetX, offsetY, isDragging = false;
                 
+                // Mouse events
                 component.addEventListener('mousedown', startDrag);
+                
+                // Touch events
+                component.addEventListener('touchstart', startDragTouch, { passive: false });
                 
                 function startDrag(e) {
                     if (removedComponents.has(component.id)) return;
@@ -948,6 +976,26 @@
                     
                     document.addEventListener('mousemove', drag);
                     document.addEventListener('mouseup', stopDrag);
+                    
+                    // Show component info
+                    showComponentInfo(component.dataset.component);
+                }
+                
+                function startDragTouch(e) {
+                    if (removedComponents.has(component.id)) return;
+                    
+                    e.preventDefault(); // Prevent scrolling while dragging
+                    
+                    isDragging = true;
+                    component.classList.add('dragging');
+                    
+                    const touch = e.touches[0];
+                    const rect = component.getBoundingClientRect();
+                    offsetX = touch.clientX - rect.left;
+                    offsetY = touch.clientY - rect.top;
+                    
+                    document.addEventListener('touchmove', dragTouch, { passive: false });
+                    document.addEventListener('touchend', stopDragTouch);
                     
                     // Show component info
                     showComponentInfo(component.dataset.component);
@@ -973,11 +1021,41 @@
                     }
                 }
                 
+                function dragTouch(e) {
+                    if (!isDragging) return;
+                    
+                    e.preventDefault(); // Prevent scrolling
+                    
+                    const touch = e.touches[0];
+                    const container = document.getElementById('ipadContainer');
+                    const containerRect = container.getBoundingClientRect();
+                    
+                    let x = touch.clientX - containerRect.left - offsetX;
+                    let y = touch.clientY - containerRect.top - offsetY;
+                    
+                    component.style.left = x + 'px';
+                    component.style.top = y + 'px';
+                    
+                    // Check if dragged far enough to remove
+                    const distance = Math.sqrt(x * x + y * y);
+                    if (distance > 150) {
+                        removeComponent(component);
+                        stopDragTouch();
+                    }
+                }
+                
                 function stopDrag() {
                     isDragging = false;
                     component.classList.remove('dragging');
                     document.removeEventListener('mousemove', drag);
                     document.removeEventListener('mouseup', stopDrag);
+                }
+                
+                function stopDragTouch() {
+                    isDragging = false;
+                    component.classList.remove('dragging');
+                    document.removeEventListener('touchmove', dragTouch);
+                    document.removeEventListener('touchend', stopDragTouch);
                 }
             });
         }
